@@ -1,0 +1,167 @@
+{
+  "coefficients": {
+    "launch_ms": 33.77631110162881,
+    "token_ms": 0.003651189107944569,
+    "attention_pair_ms": 0.0,
+    "decode_token_ms": 0.22180643850399975
+  },
+  "profiled_coefficients": {
+    "prefill_ms": 0.06012088823545873,
+    "decode_ms": 5.031496537632663
+  },
+  "calibration_sources": [
+    "results/formal/calibration_0/service.jsonl",
+    "results/formal/calibration_1/service.jsonl",
+    "results/formal/calibration_2/service.jsonl"
+  ],
+  "batches": 552,
+  "calibration_median_absolute_relative_error": 0.02017984300349668,
+  "profiled_median_absolute_relative_error": 0.11093724720201706,
+  "residuals_by_phase_and_batch_size": {
+    "decode": {
+      "batches": 181,
+      "observed_median_ms": 35.2053614333272,
+      "observed_p99_ms": 40.44034238904713,
+      "observed_max_ms": 42.21409559249878,
+      "median_absolute_relative_error": 0.024821061109188112,
+      "p95_absolute_relative_error": 0.05904271091291815
+    },
+    "decode/requests=1": {
+      "batches": 66,
+      "observed_median_ms": 32.89500856772065,
+      "observed_p99_ms": 36.71663692221045,
+      "observed_max_ms": 37.79627289623022,
+      "median_absolute_relative_error": 0.03408053397559491,
+      "p95_absolute_relative_error": 0.053354794379425606
+    },
+    "decode/requests=2": {
+      "batches": 5,
+      "observed_median_ms": 35.64551845192909,
+      "observed_p99_ms": 36.15472063422203,
+      "observed_max_ms": 36.16965189576149,
+      "median_absolute_relative_error": 0.0397887913171772,
+      "p95_absolute_relative_error": 0.05172960516535063
+    },
+    "decode/requests=3": {
+      "batches": 23,
+      "observed_median_ms": 35.440197214484215,
+      "observed_p99_ms": 37.16454675421119,
+      "observed_max_ms": 37.26232051849365,
+      "median_absolute_relative_error": 0.027864213735695066,
+      "p95_absolute_relative_error": 0.0627995164487807
+    },
+    "decode/requests=4": {
+      "batches": 27,
+      "observed_median_ms": 35.356457345187664,
+      "observed_p99_ms": 37.324490658938885,
+      "observed_max_ms": 37.76466753333807,
+      "median_absolute_relative_error": 0.019185059365213867,
+      "p95_absolute_relative_error": 0.03820771140331199
+    },
+    "decode/requests=5": {
+      "batches": 5,
+      "observed_median_ms": 34.979796037077904,
+      "observed_p99_ms": 38.62602438777685,
+      "observed_max_ms": 38.77196088433266,
+      "median_absolute_relative_error": 0.0067847154054534,
+      "p95_absolute_relative_error": 0.08159257287062285
+    },
+    "decode/requests=6": {
+      "batches": 1,
+      "observed_median_ms": 35.64819321036339,
+      "observed_p99_ms": 35.64819321036339,
+      "observed_max_ms": 35.64819321036339,
+      "median_absolute_relative_error": 0.01456276731893381,
+      "p95_absolute_relative_error": 0.01456276731893381
+    },
+    "decode/requests=7": {
+      "batches": 2,
+      "observed_median_ms": 35.26917798444629,
+      "observed_p99_ms": 35.31471741385758,
+      "observed_max_ms": 35.315646789968014,
+      "median_absolute_relative_error": 0.0024213176613198245,
+      "p95_absolute_relative_error": 0.0036099812914617366
+    },
+    "decode/requests=8": {
+      "batches": 52,
+      "observed_median_ms": 35.94204317778349,
+      "observed_p99_ms": 41.89663545228541,
+      "observed_max_ms": 42.21409559249878,
+      "median_absolute_relative_error": 0.01238132779092551,
+      "p95_absolute_relative_error": 0.07582605177491628
+    },
+    "mixed": {
+      "batches": 365,
+      "observed_median_ms": 35.11269483715296,
+      "observed_p99_ms": 39.518119655549526,
+      "observed_max_ms": 43.428380973637104,
+      "median_absolute_relative_error": 0.018989462870778347,
+      "p95_absolute_relative_error": 0.05668210535163833
+    },
+    "mixed/requests=4": {
+      "batches": 1,
+      "observed_median_ms": 35.79025808721781,
+      "observed_p99_ms": 35.79025808721781,
+      "observed_max_ms": 35.79025808721781,
+      "median_absolute_relative_error": 0.03267982591624396,
+      "p95_absolute_relative_error": 0.03267982591624396
+    },
+    "mixed/requests=5": {
+      "batches": 11,
+      "observed_median_ms": 35.08532699197531,
+      "observed_p99_ms": 35.67104069516063,
+      "observed_max_ms": 35.70684976875782,
+      "median_absolute_relative_error": 0.0062005078704579705,
+      "p95_absolute_relative_error": 0.017313200291134184
+    },
+    "mixed/requests=6": {
+      "batches": 5,
+      "observed_median_ms": 35.05144640803337,
+      "observed_p99_ms": 36.15851204842329,
+      "observed_max_ms": 36.203582771122456,
+      "median_absolute_relative_error": 0.013961758107841709,
+      "p95_absolute_relative_error": 0.027273143900304553
+    },
+    "mixed/requests=7": {
+      "batches": 14,
+      "observed_median_ms": 34.87038519233465,
+      "observed_p99_ms": 38.7677572760731,
+      "observed_max_ms": 38.85724674910307,
+      "median_absolute_relative_error": 0.02298511677023081,
+      "p95_absolute_relative_error": 0.08077256968793232
+    },
+    "mixed/requests=8": {
+      "batches": 334,
+      "observed_median_ms": 35.12388002127409,
+      "observed_p99_ms": 39.55203817225993,
+      "observed_max_ms": 43.428380973637104,
+      "median_absolute_relative_error": 0.019624805865093808,
+      "p95_absolute_relative_error": 0.05459632255104508
+    },
+    "prefill": {
+      "batches": 6,
+      "observed_median_ms": 36.50575736537576,
+      "observed_p99_ms": 38.61825866624713,
+      "observed_max_ms": 38.712372072041035,
+      "median_absolute_relative_error": 0.040396222061792456,
+      "p95_absolute_relative_error": 0.10853074977167575
+    },
+    "prefill/requests=1": {
+      "batches": 3,
+      "observed_median_ms": 36.55861783772707,
+      "observed_p99_ms": 38.669296987354755,
+      "observed_max_ms": 38.712372072041035,
+      "median_absolute_relative_error": 0.06971353907585974,
+      "p95_absolute_relative_error": 0.11629419191083895
+    },
+    "prefill/requests=8": {
+      "batches": 3,
+      "observed_median_ms": 36.452896893024445,
+      "observed_p99_ms": 36.82255981490016,
+      "observed_max_ms": 36.83010395616293,
+      "median_absolute_relative_error": 0.024046087852806663,
+      "p95_absolute_relative_error": 0.03304207218285253
+    }
+  },
+  "measurement": "Synchronous scheduler dispatch to model-output return, milliseconds"
+}

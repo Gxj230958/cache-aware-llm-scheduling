@@ -1,0 +1,359 @@
+{
+  "policy_runs": 48,
+  "completed_policy_requests": 1536,
+  "completed_output_tokens": 46080,
+  "workloads": {
+    "shared": {
+      "independent_reference_shapes": 1005,
+      "reference_sources": [
+        "results/formal/shared_isolated_0",
+        "results/formal/shared_isolated_1",
+        "results/formal/shared_isolated_2",
+        "results/formal/shared_replay_0",
+        "results/formal/shared_replay_1",
+        "results/formal/shared_replay_2"
+      ],
+      "runs": [
+        {
+          "run": "shared_fcfs_0",
+          "initialization_s": 27.605487110093236,
+          "warmup_s": 6.497040250338614,
+          "measured_s": 6.045138091780245
+        },
+        {
+          "run": "shared_fcfs_1",
+          "initialization_s": 26.943718748167157,
+          "warmup_s": 6.650039149448276,
+          "measured_s": 6.476918493397534
+        },
+        {
+          "run": "shared_fcfs_2",
+          "initialization_s": 26.49494829494506,
+          "warmup_s": 6.586199389770627,
+          "measured_s": 6.3049278277903795
+        },
+        {
+          "run": "shared_token_0",
+          "initialization_s": 26.630972146056592,
+          "warmup_s": 5.984163082204759,
+          "measured_s": 6.074755187146366
+        },
+        {
+          "run": "shared_token_1",
+          "initialization_s": 27.159930301830173,
+          "warmup_s": 5.868015351705253,
+          "measured_s": 6.056281929835677
+        },
+        {
+          "run": "shared_token_2",
+          "initialization_s": 27.141883173957467,
+          "warmup_s": 6.014710190705955,
+          "measured_s": 6.190916985273361
+        },
+        {
+          "run": "shared_profiled_0",
+          "initialization_s": 26.61543791461736,
+          "warmup_s": 6.29894198384136,
+          "measured_s": 6.00688171479851
+        },
+        {
+          "run": "shared_profiled_1",
+          "initialization_s": 26.398064335808158,
+          "warmup_s": 6.015872742980719,
+          "measured_s": 6.046154866926372
+        },
+        {
+          "run": "shared_profiled_2",
+          "initialization_s": 27.121501753106713,
+          "warmup_s": 6.142456212081015,
+          "measured_s": 6.072189496830106
+        },
+        {
+          "run": "shared_compute_0",
+          "initialization_s": 27.2598395915702,
+          "warmup_s": 6.4135151552036405,
+          "measured_s": 6.319316153414547
+        },
+        {
+          "run": "shared_compute_1",
+          "initialization_s": 26.83358122035861,
+          "warmup_s": 6.293089834973216,
+          "measured_s": 6.425931488163769
+        },
+        {
+          "run": "shared_compute_2",
+          "initialization_s": 26.32780473679304,
+          "warmup_s": 6.199364700354636,
+          "measured_s": 6.263072155416012
+        }
+      ]
+    },
+    "mixed": {
+      "independent_reference_shapes": 1090,
+      "reference_sources": [
+        "results/formal/mixed_isolated_0",
+        "results/formal/mixed_isolated_1",
+        "results/formal/mixed_isolated_2",
+        "results/formal/mixed_replay_0",
+        "results/formal/mixed_replay_1",
+        "results/formal/mixed_replay_2"
+      ],
+      "runs": [
+        {
+          "run": "mixed_fcfs_0",
+          "initialization_s": 26.49815835431218,
+          "warmup_s": 6.573960307054222,
+          "measured_s": 6.575976861640811
+        },
+        {
+          "run": "mixed_fcfs_1",
+          "initialization_s": 26.527580017223954,
+          "warmup_s": 6.576370185241103,
+          "measured_s": 6.451488114893436
+        },
+        {
+          "run": "mixed_fcfs_2",
+          "initialization_s": 26.588921307586133,
+          "warmup_s": 6.450821720995009,
+          "measured_s": 5.971974642015994
+        },
+        {
+          "run": "mixed_token_0",
+          "initialization_s": 26.88065692782402,
+          "warmup_s": 6.1658644918352365,
+          "measured_s": 6.0048343958333135
+        },
+        {
+          "run": "mixed_token_1",
+          "initialization_s": 26.84876384679228,
+          "warmup_s": 6.240449064411223,
+          "measured_s": 6.100365594960749
+        },
+        {
+          "run": "mixed_token_2",
+          "initialization_s": 27.01503126695752,
+          "warmup_s": 6.274911833927035,
+          "measured_s": 6.408847974613309
+        },
+        {
+          "run": "mixed_profiled_0",
+          "initialization_s": 26.820785032585263,
+          "warmup_s": 6.003461797721684,
+          "measured_s": 5.879915216006339
+        },
+        {
+          "run": "mixed_profiled_1",
+          "initialization_s": 26.64206483308226,
+          "warmup_s": 6.1022471552714705,
+          "measured_s": 6.345299138687551
+        },
+        {
+          "run": "mixed_profiled_2",
+          "initialization_s": 26.702104589901865,
+          "warmup_s": 5.967220400460064,
+          "measured_s": 5.868936421349645
+        },
+        {
+          "run": "mixed_compute_0",
+          "initialization_s": 26.450831105932593,
+          "warmup_s": 6.431669009849429,
+          "measured_s": 6.470013437792659
+        },
+        {
+          "run": "mixed_compute_1",
+          "initialization_s": 26.539687328971922,
+          "warmup_s": 6.442044117487967,
+          "measured_s": 6.310546617023647
+        },
+        {
+          "run": "mixed_compute_2",
+          "initialization_s": 26.535610870458186,
+          "warmup_s": 6.452107994817197,
+          "measured_s": 6.366759338416159
+        }
+      ]
+    },
+    "burst": {
+      "independent_reference_shapes": 990,
+      "reference_sources": [
+        "results/formal/burst_isolated_0",
+        "results/formal/burst_isolated_1",
+        "results/formal/burst_isolated_2",
+        "results/formal/burst_replay_0",
+        "results/formal/burst_replay_1",
+        "results/formal/burst_replay_2"
+      ],
+      "runs": [
+        {
+          "run": "burst_fcfs_0",
+          "initialization_s": 27.389788111671805,
+          "warmup_s": 6.513845295645297,
+          "measured_s": 5.907140918076038
+        },
+        {
+          "run": "burst_fcfs_1",
+          "initialization_s": 26.74151664879173,
+          "warmup_s": 6.292515733279288,
+          "measured_s": 5.855423307046294
+        },
+        {
+          "run": "burst_fcfs_2",
+          "initialization_s": 26.822228364646435,
+          "warmup_s": 6.588727358728647,
+          "measured_s": 5.6397566283121705
+        },
+        {
+          "run": "burst_token_0",
+          "initialization_s": 26.534403931349516,
+          "warmup_s": 5.938680755905807,
+          "measured_s": 6.157097175717354
+        },
+        {
+          "run": "burst_token_1",
+          "initialization_s": 26.89929344691336,
+          "warmup_s": 5.918383998796344,
+          "measured_s": 5.9879606338217854
+        },
+        {
+          "run": "burst_token_2",
+          "initialization_s": 26.36840927042067,
+          "warmup_s": 5.668626298196614,
+          "measured_s": 6.031253667548299
+        },
+        {
+          "run": "burst_profiled_0",
+          "initialization_s": 26.80271482747048,
+          "warmup_s": 6.288090041838586,
+          "measured_s": 6.2276586052030325
+        },
+        {
+          "run": "burst_profiled_1",
+          "initialization_s": 26.63721372373402,
+          "warmup_s": 6.159780976362526,
+          "measured_s": 6.485368960537016
+        },
+        {
+          "run": "burst_profiled_2",
+          "initialization_s": 26.784087570384145,
+          "warmup_s": 6.194817561656237,
+          "measured_s": 6.1500166384503245
+        },
+        {
+          "run": "burst_compute_0",
+          "initialization_s": 26.734879252500832,
+          "warmup_s": 6.3809643583372235,
+          "measured_s": 6.327142162248492
+        },
+        {
+          "run": "burst_compute_1",
+          "initialization_s": 26.690605002455413,
+          "warmup_s": 6.261497277766466,
+          "measured_s": 6.158804460428655
+        },
+        {
+          "run": "burst_compute_2",
+          "initialization_s": 26.505223425105214,
+          "warmup_s": 6.295951005071402,
+          "measured_s": 6.277386697009206
+        }
+      ]
+    },
+    "rejoin": {
+      "independent_reference_shapes": 1034,
+      "reference_sources": [
+        "results/formal/rejoin_isolated_0",
+        "results/formal/rejoin_isolated_1",
+        "results/formal/rejoin_isolated_2",
+        "results/formal/rejoin_replay_0",
+        "results/formal/rejoin_replay_1",
+        "results/formal/rejoin_replay_2"
+      ],
+      "runs": [
+        {
+          "run": "rejoin_fcfs_0",
+          "initialization_s": 26.671077613718808,
+          "warmup_s": 6.160230193287134,
+          "measured_s": 6.124982416629791,
+          "user_zero_idle_s": 1.4195630867034197
+        },
+        {
+          "run": "rejoin_fcfs_1",
+          "initialization_s": 26.68461088091135,
+          "warmup_s": 6.035092771053314,
+          "measured_s": 5.925093363970518,
+          "user_zero_idle_s": 1.4463223740458488
+        },
+        {
+          "run": "rejoin_fcfs_2",
+          "initialization_s": 26.600769175216556,
+          "warmup_s": 6.201106887310743,
+          "measured_s": 5.957303495146334,
+          "user_zero_idle_s": 1.4471149807795882
+        },
+        {
+          "run": "rejoin_token_0",
+          "initialization_s": 26.59967057593167,
+          "warmup_s": 6.165960860438645,
+          "measured_s": 5.827175565995276,
+          "user_zero_idle_s": 1.447293090634048
+        },
+        {
+          "run": "rejoin_token_1",
+          "initialization_s": 26.28725489228964,
+          "warmup_s": 6.0495439460501075,
+          "measured_s": 5.795275518670678,
+          "user_zero_idle_s": 1.4545022612437606
+        },
+        {
+          "run": "rejoin_token_2",
+          "initialization_s": 26.378649594262242,
+          "warmup_s": 6.082665082998574,
+          "measured_s": 5.803349820896983,
+          "user_zero_idle_s": 1.44933145865798
+        },
+        {
+          "run": "rejoin_profiled_0",
+          "initialization_s": 26.744792352430522,
+          "warmup_s": 6.605629966594279,
+          "measured_s": 5.956869383342564,
+          "user_zero_idle_s": 1.4660896211862564
+        },
+        {
+          "run": "rejoin_profiled_1",
+          "initialization_s": 26.376797068864107,
+          "warmup_s": 6.255884636193514,
+          "measured_s": 6.1171201495453715,
+          "user_zero_idle_s": 1.4477345384657383
+        },
+        {
+          "run": "rejoin_profiled_2",
+          "initialization_s": 27.036863681860268,
+          "warmup_s": 6.8178206803277135,
+          "measured_s": 6.111243216320872,
+          "user_zero_idle_s": 1.4452801104635
+        },
+        {
+          "run": "rejoin_compute_0",
+          "initialization_s": 28.390746016055346,
+          "warmup_s": 6.741740254685283,
+          "measured_s": 6.039661141112447,
+          "user_zero_idle_s": 1.440629673190415
+        },
+        {
+          "run": "rejoin_compute_1",
+          "initialization_s": 27.182971728034317,
+          "warmup_s": 6.514827807433903,
+          "measured_s": 6.252721484750509,
+          "user_zero_idle_s": 1.4451751047745347
+        },
+        {
+          "run": "rejoin_compute_2",
+          "initialization_s": 26.621253565885127,
+          "warmup_s": 6.726128812879324,
+          "measured_s": 6.233362326398492,
+          "user_zero_idle_s": 1.4334847293794155
+        }
+      ]
+    }
+  }
+}

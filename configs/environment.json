@@ -1,0 +1,42 @@
+{
+  "python": "3.11.14",
+  "cann": "8.5.1",
+  "device": "Ascend 910B2C, 64 GiB",
+  "physical_card": 4,
+  "packages": {
+    "vllm": "0.18.0+empty",
+    "vllm-ascend": "0.18.0",
+    "torch": "2.9.0+cpu",
+    "torch-npu": "2.9.0.post1+gitdc51c2d",
+    "transformers": "4.57.6",
+    "numpy": "1.26.4",
+    "scipy": "1.17.1",
+    "matplotlib": "3.11.2",
+    "pytest": "9.2.0",
+    "ruff": "0.14.3"
+  },
+  "vllm_revision": "bcf2be96120005e9aea171927f85055a6a5c0cf6",
+  "ascend_base_revision": "e18643f8a4d5bd9990727654318ad069ea0b56e2",
+  "ascend_public_repository": "https://github.com/vllm-project/vllm-ascend",
+  "ascend_base_release": "v0.18.0",
+  "runtime_environment": {
+    "VLLM_BATCH_INVARIANT": "1",
+    "OMP_NUM_THREADS": "4"
+  },
+  "build_environment": {
+    "COMPILE_CUSTOM_KERNELS": "0"
+  },
+  "matrix_implementation": "Public Triton batch-invariant linear/mm/matmul kernels",
+  "warmup": {
+    "query_tokens": {
+      "min": 1,
+      "max": 512,
+      "interface": "CompilationConfig.compile_sizes"
+    },
+    "output_projection_requests": {
+      "min": 1,
+      "max": 8
+    },
+    "workload": "One complete unmeasured execution before cache reset and prefix priming"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "cpu_tests": 11,
+  "lint": "Four new upstream files pass ruff check and format check",
+  "real_model_checks": {
+    "qwen3_06b_cache_accounting": "results/engine_smoke/summary.json",
+    "qwen3_4b_complete_preemption_reference": "results/rejoin_evaluation_full_smoke.json",
+    "replay_trajectories": 11,
+    "independent_reference_shapes": 963
+  },
+  "upstream_implementation_commit": "f6287c84b320755ec2d103d96ff40e92ac5848a7",
+  "token_contract": "Every complete request costs prompt_tokens + 2*generated_output_tokens; cached prompts and recomputation charge logical tokens once.",
+  "formal_protocol": "results/formal/protocol_validation.json",
+  "formal_policy_runs": 48,
+  "formal_requests": 1536,
+  "formal_output_tokens": 46080,
+  "independent_reference_shapes": {
+    "shared": 1005,
+    "mixed": 1090,
+    "burst": 990,
+    "rejoin": 1034
+  }
+}

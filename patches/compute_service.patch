@@ -1,0 +1,528 @@
+From f6287c84b320755ec2d103d96ff40e92ac5848a7 Mon Sep 17 00:00:00 2001
+From: Xingjian Guo <222823329+Gxj230958@users.noreply.github.com>
+Date: Mon, 2 Nov 2026 15:13:36 +0000
+Subject: [PATCH] feat: account executed compute service during cached chunked
+ inference
+
+Signed-off-by: Xingjian Guo <222823329+Gxj230958@users.noreply.github.com>
+---
+ tests/ut/core/test_compute_service.py         |  48 ++++
+ .../ut/core/test_compute_service_scheduler.py | 113 ++++++++++
+ vllm_ascend/core/compute_service.py           | 109 +++++++++
+ vllm_ascend/core/compute_service_scheduler.py | 213 ++++++++++++++++++
+ 4 files changed, 483 insertions(+)
+ create mode 100644 tests/ut/core/test_compute_service.py
+ create mode 100644 tests/ut/core/test_compute_service_scheduler.py
+ create mode 100644 vllm_ascend/core/compute_service.py
+ create mode 100644 vllm_ascend/core/compute_service_scheduler.py
+
+diff --git a/tests/ut/core/test_compute_service.py b/tests/ut/core/test_compute_service.py
+new file mode 100644
+index 0000000..7048e21
+--- /dev/null
++++ b/tests/ut/core/test_compute_service.py
+@@ -0,0 +1,48 @@
++import unittest
++
++from vllm_ascend.core.compute_service import CostModel, ServiceLedger, Work
++
++
++class ServiceTest(unittest.TestCase):
++    def test_cache_and_chunk_accounting(self):
++        model = CostModel(1.0, 2.0, 0.5, 3.0)
++        hit = Work("hit", "a", 16, 1024, 1040, 1024)
++        cold = Work("cold", "b", 16, 0, 1040)
++        costs = model.batch([hit, cold])
++        self.assertEqual(hit.prefill_tokens, 16)
++        self.assertEqual(sum(costs.values()), 1 + 2 * 32 + 0.5 * (hit.attention_pairs + cold.attention_pairs))
++        # Cached tokens have no projections or MLP cost but remain attention keys.
++        self.assertEqual(costs["hit"] - costs["cold"], 0.5 * 16 * 1024)
++        decode = Work("d", "a", 1, 1040, 1040, 1024)
++        self.assertEqual(decode.decode_tokens, 1)
++        self.assertEqual(decode.attention_pairs, 1041)
++
++    def test_weights_and_batch_reservation(self):
++        ledger = ServiceLedger()
++        work = [Work(str(i), "a" if i < 4 else "b", 1, 0, 1) for i in range(8)]
++        for item in work:
++            ledger.arrive(item.request_id, item.user, 2 if item.user == "a" else 1)
++        costs = {item.request_id: 1.0 for item in work}
++        order = ledger.order(work, costs)
++        self.assertEqual(order[:3], ["0", "4", "1"])
++        self.assertEqual(ledger.service, {"a": 0.0, "b": 0.0})
++        ledger.charge(work, costs)
++        self.assertEqual(ledger.virtual, {"a": 2.0, "b": 4.0})
++
++    def test_returning_user_cannot_bank_idle_credit(self):
++        ledger = ServiceLedger()
++        ledger.arrive("a1", "a")
++        ledger.arrive("b1", "b")
++        ledger.charge([Work("a1", "a", 1, 0, 1), Work("b1", "b", 1, 0, 1)], {"a1": 5.0, "b1": 10.0})
++        ledger.depart("a1")
++        ledger.charge([Work("b1", "b", 1, 0, 1)], {"b1": 10.0})
++        ledger.arrive("a2", "a")
++        self.assertEqual(ledger.virtual["a"], 20.0)
++        ledger.depart("a2")
++        ledger.depart("b1")
++        ledger.arrive("new", "c")
++        self.assertEqual(ledger.virtual["c"], 20.0)
++
++
++if __name__ == "__main__":
++    unittest.main()
+diff --git a/tests/ut/core/test_compute_service_scheduler.py b/tests/ut/core/test_compute_service_scheduler.py
+new file mode 100644
+index 0000000..e94edf2
+--- /dev/null
++++ b/tests/ut/core/test_compute_service_scheduler.py
+@@ -0,0 +1,113 @@
++import time
++from types import SimpleNamespace
++from unittest.mock import patch
++
++import pytest
++from vllm.v1.core.sched.request_queue import FCFSRequestQueue
++from vllm.v1.core.sched.scheduler import Scheduler
++
++from vllm_ascend.core.compute_service import CostModel, ServiceLedger, Work
++from vllm_ascend.core.compute_service_scheduler import ComputeServiceScheduler
++
++
++def test_preempted_request_leaves_worker_batch_before_resumption():
++    scheduler = object.__new__(ComputeServiceScheduler)
++    scheduler.accounting = "compute"
++    scheduler.ledger = ServiceLedger()
++    scheduler.cost_model = CostModel(1.0, 1.0, 0.0, 0.0)
++    scheduler.max_num_running_reqs = 2
++    scheduler.max_num_scheduled_tokens = 512
++    scheduler.scheduler_config = SimpleNamespace(long_prefill_token_threshold=64)
++    requests = [
++        SimpleNamespace(
++            request_id=rid,
++            num_tokens=128,
++            num_computed_tokens=64,
++            num_prompt_tokens=128,
++            num_cached_tokens=0,
++            sampling_params=SimpleNamespace(extra_args={"logical_request_id": rid}),
++        )
++        for rid in ["a1", "a2", "b1"]
++    ]
++    for request in requests:
++        scheduler.ledger.arrive(request.request_id, request.request_id[0])
++    scheduler.ledger.virtual["a"] = 10.0
++    scheduler.running = requests[:2]
++    scheduler.waiting = FCFSRequestQueue(requests[2:])
++    scheduler.skipped_waiting = FCFSRequestQueue()
++    scheduler.requests = {r.request_id: r for r in requests}
++    scheduler._preempt_request = lambda request, timestamp: scheduler.waiting.prepend_request(request)
++
++    def base_schedule(self):
++        assert [r.request_id for r in self.waiting] == ["b1"]
++        assert len(self.running) == 1
++        return SimpleNamespace(num_scheduled_tokens={}, preempted_req_ids=set())
++
++    with patch.object(Scheduler, "schedule", base_schedule):
++        output = scheduler.schedule()
++    assert output.preempted_req_ids == {"a1"}
++    assert [r.request_id for r in scheduler.waiting] == ["b1", "a1"]
++
++
++@pytest.mark.parametrize(
++    "prompt, chunks, charges",
++    [
++        (128, [(64, 0), (64, 64), (1, 128)], [64, 66, 2]),
++        (129, [(1, 128), (1, 129)], [131, 2]),
++        (128, [(64, 0), (64, 64), (1, 128), (64, 0), (64, 64), (1, 128), (1, 129)], [64, 66, 2, 0, 0, 0, 2]),
++    ],
++)
++def test_token_service_counts_every_generated_output_once(prompt, chunks, charges):
++    scheduler = object.__new__(ComputeServiceScheduler)
++    scheduler.accounting = "token"
++    scheduler.ledger = ServiceLedger()
++    scheduler.ledger.arrive("r", "u")
++    scheduler.token_progress = {}
++    scheduler.service_log = None
++    scheduler.batch_number = 0
++    scheduler.requests = {"r": None}
++    previous = 0.0
++    with patch.object(Scheduler, "update_from_output", return_value={}):
++        for (query, context), expected in zip(chunks, charges):
++            scheduler.pending_work = [Work("r", "u", query, context, prompt)]
++            scheduler.batch_started = time.perf_counter()
++            scheduler.update_from_output(None, None)
++            current = scheduler.ledger.service["u"]
++            assert current - previous == expected
++            previous = current
++    generated_outputs = 1 + max(context + query for query, context in chunks) - prompt
++    assert previous == prompt + 2 * generated_outputs
++
++
++def test_profiled_service_retains_decode_query_units():
++    scheduler = object.__new__(ComputeServiceScheduler)
++    scheduler.accounting = "profiled"
++    scheduler.profiled_coefficients = {"prefill_ms": 3.0, "decode_ms": 7.0}
++    scheduler.ledger = ServiceLedger()
++    scheduler.ledger.arrive("r", "u")
++    scheduler.token_progress = {}
++    scheduler.service_log = None
++    scheduler.batch_number = 0
++    scheduler.requests = {"r": None}
++    with patch.object(Scheduler, "update_from_output", return_value={}):
++        for query, context in [(64, 0), (64, 64), (1, 128)]:
++            scheduler.pending_work = [Work("r", "u", query, context, 128)]
++            scheduler.batch_started = time.perf_counter()
++            scheduler.update_from_output(None, None)
++    assert scheduler.ledger.service["u"] == 3 * 128 + 7
++
++
++def test_token_reservation_includes_first_output_at_prefill_completion():
++    scheduler = object.__new__(ComputeServiceScheduler)
++    scheduler.accounting = "token"
++    scheduler.ledger = ServiceLedger()
++    scheduler.ledger.arrive("r", "u")
++    scheduler.token_progress = {"r": 64}
++    scheduler.max_num_scheduled_tokens = 512
++    scheduler.scheduler_config = SimpleNamespace(long_prefill_token_threshold=64)
++    request = SimpleNamespace(
++        request_id="r", num_tokens=128, num_computed_tokens=64, num_prompt_tokens=128, num_cached_tokens=0
++    )
++    with patch.object(scheduler.ledger, "order", return_value=["r"]) as order:
++        assert scheduler._order([request]) == [request]
++    assert order.call_args.args[1] == {"r": 66}
+diff --git a/vllm_ascend/core/compute_service.py b/vllm_ascend/core/compute_service.py
+new file mode 100644
+index 0000000..b8aa088
+--- /dev/null
++++ b/vllm_ascend/core/compute_service.py
+@@ -0,0 +1,109 @@
++"""Virtual service accounting for executed prefill chunks and decode tokens."""
++
++import math
++from dataclasses import dataclass
++
++
++@dataclass(frozen=True)
++class Work:
++    request_id: str
++    user: str
++    query_tokens: int
++    context_tokens: int
++    prompt_tokens: int
++    cached_tokens: int = 0
++
++    @property
++    def prefill_tokens(self):
++        return min(self.query_tokens, max(0, self.prompt_tokens - self.context_tokens))
++
++    @property
++    def decode_tokens(self):
++        return self.query_tokens - self.prefill_tokens
++
++    @property
++    def attention_pairs(self):
++        q = self.query_tokens
++        return q * self.context_tokens + q * (q + 1) / 2
++
++
++@dataclass(frozen=True)
++class CostModel:
++    launch_ms: float
++    token_ms: float
++    attention_pair_ms: float
++    decode_token_ms: float = 0.0
++
++    def __post_init__(self):
++        if any(
++            not math.isfinite(x) or x < 0
++            for x in (self.launch_ms, self.token_ms, self.attention_pair_ms, self.decode_token_ms)
++        ):
++            raise ValueError("Cost coefficients must be finite and nonnegative")
++
++    def batch(self, work):
++        if not work:
++            return {}
++        # One launch cost is shared by requests actually executing in this batch.
++        return {
++            w.request_id: self.launch_ms / len(work)
++            + self.token_ms * w.query_tokens
++            + self.attention_pair_ms * w.attention_pairs
++            + self.decode_token_ms * w.decode_tokens
++            for w in work
++        }
++
++
++class ServiceLedger:
++    def __init__(self):
++        self.virtual = {}
++        self.service = {}
++        self.weights = {}
++        self.active = {}
++        self.floor = 0.0
++
++    def arrive(self, request_id, user, weight=1.0):
++        if not math.isfinite(weight) or weight <= 0:
++            raise ValueError("User weight must be finite and positive")
++        if user in self.weights and self.weights[user] != weight:
++            raise ValueError("A user has one fixed experiment weight")
++        if request_id in self.active:
++            raise ValueError("Duplicate request ID")
++        backlogged = set(self.active.values())
++        if user not in backlogged:
++            floor = min((self.virtual[u] for u in backlogged), default=self.floor)
++            self.virtual[user] = max(self.virtual.get(user, floor), floor)
++        self.weights[user] = weight
++        self.service.setdefault(user, 0.0)
++        self.active[request_id] = user
++
++    def depart(self, request_id):
++        self.active.pop(request_id)
++        if self.active:
++            self.floor = max(self.floor, min(self.virtual[u] for u in set(self.active.values())))
++        else:
++            self.floor = max(self.floor, max(self.virtual.values(), default=0.0))
++
++    def charge(self, work, costs):
++        for item in work:
++            cost = costs[item.request_id]
++            if cost < 0 or not math.isfinite(cost):
++                raise ValueError("Service must be finite and nonnegative")
++            if self.active.get(item.request_id) != item.user:
++                raise ValueError("Service charged to inactive request or wrong user")
++            self.service[item.user] += cost
++            self.virtual[item.user] += cost / self.weights[item.user]
++        if self.active:
++            self.floor = max(self.floor, min(self.virtual[u] for u in set(self.active.values())))
++
++    def order(self, work, predicted_costs):
++        """Reserve service while constructing a batch, including same-user requests."""
++        remaining = list(enumerate(work))
++        reserved = dict(self.virtual)
++        ordered = []
++        while remaining:
++            index, item = min(remaining, key=lambda pair: (reserved[pair[1].user], pair[0]))
++            remaining.remove((index, item))
++            ordered.append(item.request_id)
++            reserved[item.user] += predicted_costs[item.request_id] / self.weights[item.user]
++        return ordered
+diff --git a/vllm_ascend/core/compute_service_scheduler.py b/vllm_ascend/core/compute_service_scheduler.py
+new file mode 100644
+index 0000000..adf39fc
+--- /dev/null
++++ b/vllm_ascend/core/compute_service_scheduler.py
+@@ -0,0 +1,213 @@
++"""vLLM V1 scheduler with cache-aware virtual compute service accounting."""
++
++import json
++import math
++import time
++from pathlib import Path
++
++from vllm.v1.core.sched.request_queue import FCFSRequestQueue
++from vllm.v1.core.sched.scheduler import Scheduler
++
++from vllm_ascend.core.compute_service import CostModel, ServiceLedger, Work
++
++
++class ComputeServiceScheduler(Scheduler):
++    """Synchronous dense-Qwen scheduling using executed chunk/context costs.
++
++    Experiment metadata lives in SamplingParams.extra_args under ``fair_user``
++    and ``fair_weight``. Cost coefficients are calibrated separately and passed
++    in VllmConfig.additional_config['compute_service'].
++    """
++
++    def __init__(self, *args, **kwargs):
++        super().__init__(*args, **kwargs)
++        if self.scheduler_config.async_scheduling:
++            raise ValueError("This experiment requires async_scheduling=False")
++        if self.vllm_config.speculative_config or self.connector is not None:
++            raise ValueError("This experiment uses local prefix caching without speculative decoding")
++        config = self.vllm_config.additional_config["compute_service"]
++        self.accounting = config.get("accounting", "compute")
++        self.cost_model = CostModel(**config["coefficients"])
++        self.profiled_coefficients = config.get("profiled_coefficients")
++        if self.accounting == "profiled" and self.profiled_coefficients is None:
++            raise ValueError("Profiled VTC requires separately fitted token coefficients")
++        self.ledger = ServiceLedger()
++        self.service_log = Path(config["log"]) if config.get("log") else None
++        if self.service_log:
++            self.service_log.parent.mkdir(parents=True, exist_ok=True)
++        self.batch_number = 0
++        self.pending_work = []
++        self.token_progress = {}
++        self.batch_preemptions = []
++
++    def add_request(self, request):
++        metadata = request.sampling_params.extra_args or {}
++        user = str(metadata["fair_user"])
++        weight = float(metadata.get("fair_weight", 1.0))
++        self.ledger.arrive(request.request_id, user, weight)
++        super().add_request(request)
++
++    def _work(self, request, query, context):
++        return Work(
++            request.request_id,
++            self.ledger.active[request.request_id],
++            query,
++            context,
++            request.num_prompt_tokens,
++            max(0, request.num_cached_tokens),
++        )
++
++    def _predicted(self, requests):
++        work = []
++        threshold = self.scheduler_config.long_prefill_token_threshold
++        for request in requests:
++            query = max(1, request.num_tokens - request.num_computed_tokens)
++            if threshold > 0:
++                query = min(query, threshold)
++            query = min(query, self.max_num_scheduled_tokens)
++            work.append(self._work(request, query, request.num_computed_tokens))
++        return work
++
++    def _order(self, requests):
++        requests = list(requests)
++        work = self._predicted(requests)
++        if self.accounting == "token":
++            costs = {
++                w.request_id: w.prefill_tokens
++                + 2
++                * (
++                    w.decode_tokens
++                    + int(
++                        self.token_progress.get(w.request_id, 0) < w.prompt_tokens <= w.context_tokens + w.query_tokens
++                    )
++                )
++                for w in work
++            }
++        elif self.accounting == "profiled":
++            costs = {
++                w.request_id: self.profiled_coefficients["prefill_ms"] * w.prefill_tokens
++                + self.profiled_coefficients["decode_ms"] * w.decode_tokens
++                for w in work
++            }
++        else:
++            costs = self.cost_model.batch(work)
++        ordered = self.ledger.order(work, costs)
++        by_id = {r.request_id: r for r in requests}
++        return [by_id[rid] for rid in ordered]
++
++    def _admit_waiting_users(self):
++        if len(self.running) < self.max_num_running_reqs or not self.waiting:
++            return
++        users = set(self.ledger.active.values())
++        total_weight = sum(self.ledger.weights[u] for u in users)
++        counts = {u: 0 for u in users}
++        for request in self.running:
++            counts[self.ledger.active[request.request_id]] += 1
++        waiting_user = min(
++            (self.ledger.active[r.request_id] for r in self.waiting), key=self.ledger.virtual.__getitem__
++        )
++        quota = max(1, math.ceil(self.max_num_running_reqs * self.ledger.weights[waiting_user] / total_weight))
++        if counts[waiting_user] >= quota:
++            return
++        victims = [
++            r
++            for r in self.running
++            if self.ledger.active[r.request_id] != waiting_user
++            and counts[self.ledger.active[r.request_id]]
++            > self.max_num_running_reqs * self.ledger.weights[self.ledger.active[r.request_id]] / total_weight
++        ]
++        if victims:
++            victim = max(victims, key=lambda r: self.ledger.virtual[self.ledger.active[r.request_id]])
++            metadata = victim.sampling_params.extra_args
++            self.batch_preemptions.append(
++                {
++                    "request_id": victim.request_id,
++                    "logical_request_id": metadata.get("logical_request_id", victim.request_id),
++                    "computed_tokens": victim.num_computed_tokens,
++                }
++            )
++            self.running.remove(victim)
++            self._preempt_request(victim, time.monotonic())
++            self.waiting.remove_request(victim)
++            return victim
++
++    def schedule(self):
++        self.batch_preemptions = []
++        preempted = None
++        if self.accounting != "fcfs":
++            preempted = self._admit_waiting_users()
++            self.running[:] = self._order(self.running)
++            self.waiting = FCFSRequestQueue(self._order(self.waiting))
++            self.skipped_waiting = FCFSRequestQueue(self._order(self.skipped_waiting))
++        output = super().schedule()
++        if preempted is not None:
++            # The worker drops the persistent batch entry before resumption.
++            self.waiting.add_request(preempted)
++            output.preempted_req_ids.add(preempted.request_id)
++        self.pending_work = [
++            self._work(self.requests[rid], query, self.requests[rid].num_computed_tokens - query)
++            for rid, query in output.num_scheduled_tokens.items()
++        ]
++        self.batch_started = time.perf_counter()
++        return output
++
++    def update_from_output(self, scheduler_output, model_runner_output):
++        execution_ms = (time.perf_counter() - self.batch_started) * 1000
++        work = self.pending_work
++        tokens = {}
++        for item in work:
++            previous = self.token_progress.get(item.request_id, 0)
++            end = item.context_tokens + item.query_tokens
++            prefill = max(0, min(item.prompt_tokens, end) - min(item.prompt_tokens, previous))
++            decode = max(0, end - max(previous, item.prompt_tokens))
++            if self.accounting == "token":
++                # Completing prefill produces the request's first output token.
++                decode += int(previous < item.prompt_tokens <= end)
++            tokens[item.request_id] = prefill, decode
++            self.token_progress[item.request_id] = max(previous, end)
++        if self.accounting == "token":
++            costs = {w.request_id: tokens[w.request_id][0] + 2 * tokens[w.request_id][1] for w in work}
++        elif self.accounting == "profiled":
++            costs = {
++                w.request_id: self.profiled_coefficients["prefill_ms"] * tokens[w.request_id][0]
++                + self.profiled_coefficients["decode_ms"] * tokens[w.request_id][1]
++                for w in work
++            }
++        elif self.accounting in ("compute", "fcfs"):
++            costs = self.cost_model.batch(work)
++        else:
++            raise ValueError(f"Unknown accounting: {self.accounting}")
++        self.ledger.charge(work, costs)
++        if self.service_log and work:
++            with self.service_log.open("a") as handle:
++                handle.write(
++                    json.dumps(
++                        {
++                            "batch": self.batch_number,
++                            "execution_ms": execution_ms,
++                            "completed_at": time.monotonic(),
++                            "preemptions": self.batch_preemptions,
++                            "work": [
++                                w.__dict__
++                                | {
++                                    "charged_service": costs[w.request_id],
++                                    "logical_request_id": self.requests[w.request_id].sampling_params.extra_args.get(
++                                        "logical_request_id", w.request_id
++                                    ),
++                                }
++                                for w in work
++                            ],
++                            "service": dict(self.ledger.service),
++                            "virtual": dict(self.ledger.virtual),
++                        }
++                    )
++                    + "\n"
++                )
++        self.batch_number += 1
++        self.pending_work = []
++        result = super().update_from_output(scheduler_output, model_runner_output)
++        for request_id in list(self.ledger.active):
++            if request_id not in self.requests:
++                self.ledger.depart(request_id)
++                self.token_progress.pop(request_id, None)
++        return result
+-- 
+2.34.1
+
